@@ -6,16 +6,14 @@ import time
 import re
 import csv
 
-def amazon_result_parser(result, search_results, target_country):
+def amazon_result_parser(result, search_results, country):
     # Initialize an empty dictionary for each review
     result_dict = {}
-
     # Used try and except to skip the result elements that are empty. 
     # Used relative xpath to locate the needed elements.
     # Once elements are located, used 'element.text' to return its string.
     # To get the attribute instead of the text of each element, used 'element.get_attribute()'
-    # NOTE: Pages which display '48' results vs '16' results per page are coded slightly differently.
-    country = target_country       
+    # NOTE: Pages which display '48' results vs '16' results per page are coded slightly differently.      
     if '48' in search_results:
         try:
             title = result.find_element_by_xpath('.//span[@class="a-size-base-plus a-color-base a-text-normal"]').text
@@ -71,11 +69,11 @@ def search_result_finder(driver):
 # Prepare two .csv files.
 csv_file1 = open('main_amazon.csv', 'w', encoding='utf-8', newline='')
 csv_writer1 = csv.writer(csv_file1)
-csv_writer1.writerow(['country', 'title', 'rating', 'price', 'sponsored', 'form']) #ADD COUNTRY!!!!!!!!!!!!!!!!!!!!!!!!!!!
+csv_writer1.writerow(['country', 'title', 'rating', 'price', 'sponsored', 'form']) 
 
 csv_file2 = open('sorted_amazon.csv', 'w', encoding='utf-8', newline='')
 csv_writer2 = csv.writer(csv_file2)
-csv_writer2.writerow(['country', 'title', 'rating', 'price', 'sponsored', 'form']) #ADD COUNTRY!!!!!!!!!!!!!!!!!!!!!!!!!!!
+csv_writer2.writerow(['country', 'title', 'rating', 'price', 'sponsored', 'form']) 
 
 # Windows users need to specify the path to chrome driver you just downloaded.
 # You need to unzip the zipfile first and move the .exe file to any folder you want.
@@ -99,6 +97,7 @@ for url in url_list:
 			break
 
 	driver.get(url)
+	
 	# Expand Left-Pane Department List If Necessary	
 	try: 
 		expand_buttons = driver.find_elements_by_xpath('//span[@class="a-expander-prompt"]')
@@ -107,15 +106,19 @@ for url in url_list:
 	except:
 		pass
 
-	search_results = search_result_finder(driver)
+	# Total search results listed at the top of the page (string).
+	search_results = search_result_finder(driver)	
+	f = open(r'C:\Users\TRW\Documents\NYCDSA\Selenium\Web_Scraping_Project\main_search_results.txt', 'a')
+	f.write(target_country+': '+search_results+'\n')
+	f.close()
 
 	# Find all the results. The find_elements function will return a list of selenium select elements.
 	# Check the documentation here: http://selenium-python.readthedocs.io/locating-elements.html
 	default_results = driver.find_elements_by_xpath('//div[@data-component-type="s-search-result"]')
-	# Iterate through the list and find the result details on the first page of each site.
+	# Iterate through the list and find the item results on the first page of each site.
+	# using the "amazon_result_parser" function.
 	for result in default_results:
 		csv_writer1.writerow(amazon_result_parser(result, search_results, target_country).values())
-
 
 	# Order By Average Customer Reviews
 	try: 
@@ -123,13 +126,19 @@ for url in url_list:
 		driver.find_element_by_xpath('//a[@id="s-result-sort-select_3"]').click()
 	except:
 		pass
-	time.sleep(5)
+	time.sleep(3)
 
+	# Total search results listed at the top of the page (string).
 	search_results = search_result_finder(driver)
+	f = open(r'C:\Users\TRW\Documents\NYCDSA\Selenium\Web_Scraping_Project\sorted_search_results.txt', 'a')
+	f.write(target_country+': '+search_results+'\n')
+	f.close()
+
 	# Find all the results. The find_elements function will return a list of selenium select elements.
 	# Check the documentation here: http://selenium-python.readthedocs.io/locating-elements.html
 	sorted_results = driver.find_elements_by_xpath('//div[@data-component-type="s-search-result"]')
-	# Iterate through the list and find the result details on the first page of each site.
+	# Iterate through the list and find the item results on the first page of each site
+	# using the "amazon_result_parser" function.
 	for result in sorted_results:
 		csv_writer2.writerow(amazon_result_parser(result, search_results, target_country).values())
 
