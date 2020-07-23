@@ -6,7 +6,7 @@ import time
 import re
 import csv
 
-def amazon_result_parser(result, search_results):
+def amazon_result_parser(result, search_results, target_country):
     # Initialize an empty dictionary for each review
     result_dict = {}
 
@@ -14,7 +14,8 @@ def amazon_result_parser(result, search_results):
     # Used relative xpath to locate the needed elements.
     # Once elements are located, used 'element.text' to return its string.
     # To get the attribute instead of the text of each element, used 'element.get_attribute()'
-    # NOTE: Pages which display '48' results vs '16' results per page are coded slightly differently.       
+    # NOTE: Pages which display '48' results vs '16' results per page are coded slightly differently.
+    country = target_country       
     if '48' in search_results:
         try:
             title = result.find_element_by_xpath('.//span[@class="a-size-base-plus a-color-base a-text-normal"]').text
@@ -52,7 +53,7 @@ def amazon_result_parser(result, search_results):
         form = result.find_element_by_xpath('.//a[@class="a-size-base a-link-normal a-text-bold"]').text
     except:
         form = None
-
+    result_dict['country'] = country
     result_dict['title'] = title
     result_dict['rating'] = rating
     result_dict['price'] = price
@@ -70,11 +71,11 @@ def search_result_finder(driver):
 # Prepare two .csv files.
 csv_file1 = open('main_amazon.csv', 'w', encoding='utf-8', newline='')
 csv_writer1 = csv.writer(csv_file1)
-csv_writer1.writerow(['title', 'rating', 'price', 'sponsored', 'form'])
+csv_writer1.writerow(['country', 'title', 'rating', 'price', 'sponsored', 'form']) #ADD COUNTRY!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 csv_file2 = open('sorted_amazon.csv', 'w', encoding='utf-8', newline='')
 csv_writer2 = csv.writer(csv_file2)
-csv_writer2.writerow(['title', 'rating', 'price', 'sponsored', 'form'])
+csv_writer2.writerow(['country', 'title', 'rating', 'price', 'sponsored', 'form']) #ADD COUNTRY!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # Windows users need to specify the path to chrome driver you just downloaded.
 # You need to unzip the zipfile first and move the .exe file to any folder you want.
@@ -83,12 +84,20 @@ driver = webdriver.Chrome(r'C:\Users\TRW\chromedriver.exe')
 # Prepare list of websites to visit.
 url_list = []
 main = "https://www.amazon."
-countries = ["com/au", "ca", "in", "sg", "ae", "co.uk", "com"]
+#countries = ["com/au", "ca", "in", "sg", "ae", "co.uk", "com"]
+countries = {"com.au":"Australia", "ca":"Canada", "in":"India", \
+			 "sg":"Singapore", "ae":"United Arab Emirates", \
+			 "co.uk":"United Kingdom", "com":"United States"}
 search = "/s?k=improve+my+life"
-for country in countries:
+for country in countries.keys():
 	url_list.append(main+country+search)
 
 for url in url_list:
+	for country in countries.keys():
+		if country in url:
+			target_country = countries[country]
+			break
+
 	driver.get(url)
 	# Expand Left-Pane Department List If Necessary	
 	try: 
@@ -105,7 +114,7 @@ for url in url_list:
 	default_results = driver.find_elements_by_xpath('//div[@data-component-type="s-search-result"]')
 	# Iterate through the list and find the result details on the first page of each site.
 	for result in default_results:
-		csv_writer1.writerow(amazon_result_parser(result, search_results).values())
+		csv_writer1.writerow(amazon_result_parser(result, search_results, target_country).values())
 
 
 	# Order By Average Customer Reviews
@@ -122,7 +131,7 @@ for url in url_list:
 	sorted_results = driver.find_elements_by_xpath('//div[@data-component-type="s-search-result"]')
 	# Iterate through the list and find the result details on the first page of each site.
 	for result in sorted_results:
-		csv_writer2.writerow(amazon_result_parser(result, search_results).values())
+		csv_writer2.writerow(amazon_result_parser(result, search_results, target_country).values())
 
 
 
