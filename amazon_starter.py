@@ -6,10 +6,75 @@ import time
 import re
 import csv
 
-# Prepare .csv file.
-csv_file = open('amazon.csv', 'w', encoding='utf-8', newline='')
-csv_writer = csv.writer(csv_file)
-csv_writer.writerow(['title', 'rating', 'price', 'sponsored', 'form'])
+def amazon_result_parser(result, search_results):
+    # Initialize an empty dictionary for each review
+    result_dict = {}
+
+    # Used try and except to skip the result elements that are empty. 
+    # Used relative xpath to locate the needed elements.
+    # Once elements are located, used 'element.text' to return its string.
+    # To get the attribute instead of the text of each element, used 'element.get_attribute()'
+    # NOTE: Pages which display '48' results vs '16' results per page are coded slightly differently.       
+    if '48' in search_results:
+        try:
+            title = result.find_element_by_xpath('.//span[@class="a-size-base-plus a-color-base a-text-normal"]').text
+        except:
+            title = None
+        try:
+            rating = result.find_element_by_xpath('.//div[3]/div/span[1]').get_attribute('aria-label')[:3]
+            rating = float(rating)
+        except:
+            rating = None
+
+    if '16' in search_results:
+        try:
+            title = result.find_element_by_xpath('.//span[@class="a-size-medium a-color-base a-text-normal"]').text
+        except:
+            title = None
+        try:
+            rating = result.find_element_by_xpath('.//div[2]/div/span[1]').get_attribute('aria-label')[:3]
+            rating = float(rating)
+        except:
+            rating = None
+    try:
+        price = result.find_element_by_xpath('.//span/span[@class="a-price-symbol"]').text
+        price += result.find_element_by_xpath('.//span/span[@class="a-price-whole"]').text
+        if "in" not in url: # Only India's site doesn't have fractional prices.
+            price += '.' + result.find_element_by_xpath('.//span/span[@class="a-price-fraction"]').text
+    except:
+        price = None
+    try:    
+        _ = result.find_element_by_xpath('.//span[@class="a-size-mini a-color-secondary"]').text
+        sponsored = 1
+    except:
+        sponsored = 0
+    try:
+        form = result.find_element_by_xpath('.//a[@class="a-size-base a-link-normal a-text-bold"]').text
+    except:
+        form = None
+
+    result_dict['title'] = title
+    result_dict['rating'] = rating
+    result_dict['price'] = price
+    result_dict['sponsored'] = sponsored
+    result_dict['form'] = form
+
+    return result_dict
+
+def search_result_finder(driver):
+	results = driver.find_element_by_xpath('//div/span[@dir="auto"]').text
+	results += " " + driver.find_element_by_xpath('//div//span[@class="a-color-state a-text-bold"]').text.strip("\"")
+	return results
+    #csv_writer1.writerow(result_dict.values())
+
+# Prepare two .csv files.
+csv_file1 = open('main_amazon.csv', 'w', encoding='utf-8', newline='')
+csv_writer1 = csv.writer(csv_file1)
+csv_writer1.writerow(['title', 'rating', 'price', 'sponsored', 'form'])
+
+csv_file2 = open('sorted_amazon.csv', 'w', encoding='utf-8', newline='')
+csv_writer2 = csv.writer(csv_file2)
+csv_writer2.writerow(['title', 'rating', 'price', 'sponsored', 'form'])
 
 # Windows users need to specify the path to chrome driver you just downloaded.
 # You need to unzip the zipfile first and move the .exe file to any folder you want.
@@ -25,84 +90,41 @@ for country in countries:
 
 for url in url_list:
 	driver.get(url)
+	# Expand Left-Pane Department List If Necessary	
 	try: 
-		# Expand Left-Pane Department List If Necessary
 		expand_buttons = driver.find_elements_by_xpath('//span[@class="a-expander-prompt"]')
 		for button in expand_buttons:
 			button.click()
 	except:
 		pass
 
-	# Get Total Search Results
-	search_results = driver.find_element_by_xpath('//div/span[@dir="auto"]').text
-	search_results += " " + driver.find_element_by_xpath('//div//span[@class="a-color-state a-text-bold"]').text.strip("\"")
-
-	print(url)
-	print(search_results)
-	if '16' in search_results:
-		print('16 PAGER')
-	if '48' in search_results:
-		print('48 PAGER')
-	print('+'*79)
+	search_results = search_result_finder(driver)
 
 	# Find all the results. The find_elements function will return a list of selenium select elements.
 	# Check the documentation here: http://selenium-python.readthedocs.io/locating-elements.html
-	results = driver.find_elements_by_xpath('//div[@data-component-type="s-search-result"]')
+	default_results = driver.find_elements_by_xpath('//div[@data-component-type="s-search-result"]')
 	# Iterate through the list and find the result details on the first page of each site.
-	for result in results:
-		# Initialize an empty dictionary for each review
-		result_dict = {}
+	for result in default_results:
+		csv_writer1.writerow(amazon_result_parser(result, search_results).values())
 
-		# Used try and except to skip the result elements that are empty. 
-		# Used relative xpath to locate the needed elements.
-		# Once elements are located, used 'element.text' to return its string.
-		# To get the attribute instead of the text of each element, used 'element.get_attribute()'
-		# NOTE: Pages which display '48' results vs '16' results per page are coded slightly differently.		
-		if '48' in search_results:
-			try:
-				title = result.find_element_by_xpath('.//span[@class="a-size-base-plus a-color-base a-text-normal"]').text
-			except:
-				title = None
-			try:
-				rating = result.find_element_by_xpath('.//div[3]/div/span[1]').get_attribute('aria-label')[:3]
-				rating = float(rating)
-			except:
-				rating = None
 
-		if '16' in search_results:
-			try:
-				title = result.find_element_by_xpath('.//span[@class="a-size-medium a-color-base a-text-normal"]').text
-			except:
-				title = None
-			try:
-				rating = result.find_element_by_xpath('.//div[2]/div/span[1]').get_attribute('aria-label')[:3]
-				rating = float(rating)
-			except:
-				rating = None
-		try:
-			price = result.find_element_by_xpath('.//span/span[@class="a-price-symbol"]').text
-			price += result.find_element_by_xpath('.//span/span[@class="a-price-whole"]').text
-			if "in" not in url: # Only India's site doesn't have fractional prices.
-				price += '.' + result.find_element_by_xpath('.//span/span[@class="a-price-fraction"]').text
-		except:
-			price = None
-		try:	
-			_ = result.find_element_by_xpath('.//span[@class="a-size-mini a-color-secondary"]').text
-			sponsored = 1
-		except:
-			sponsored = 0
-		try:
-			form = result.find_element_by_xpath('.//a[@class="a-size-base a-link-normal a-text-bold"]').text
-		except:
-			form = None
+	# Order By Average Customer Reviews
+	try: 
+		driver.find_element_by_xpath('//span[@class="a-dropdown-prompt"]').click()
+		driver.find_element_by_xpath('//a[@id="s-result-sort-select_3"]').click()
+	except:
+		pass
+	time.sleep(5)
 
-		result_dict['title'] = title
-		result_dict['rating'] = rating
-		result_dict['price'] = price
-		result_dict['sponsored'] = sponsored
-		result_dict['form'] = form
-		
-		csv_writer.writerow(result_dict.values())
+	search_results = search_result_finder(driver)
+	# Find all the results. The find_elements function will return a list of selenium select elements.
+	# Check the documentation here: http://selenium-python.readthedocs.io/locating-elements.html
+	sorted_results = driver.find_elements_by_xpath('//div[@data-component-type="s-search-result"]')
+	# Iterate through the list and find the result details on the first page of each site.
+	for result in sorted_results:
+		csv_writer2.writerow(amazon_result_parser(result, search_results).values())
+
+
 
 #depts = driver.find_elements_by_xpath 
 #depts = 
