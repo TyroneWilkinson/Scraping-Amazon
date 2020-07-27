@@ -8,16 +8,20 @@ import csv
 
 def search_result_finder(driver):
     """
+    Scrapes the text depicting the total search results listed at the 
+    top of Amazon's page.
 
+    Parameter:
+    driver: Chrome web driver pointing to page you want to scrape.
 
-
+    Return:
+    results (string): Text depicting the search results.
     """
     results = driver.find_element_by_xpath('//div/span[@dir="auto"]').text
     results += " " + driver.find_element_by_xpath('//div//span[@class="a-color-state a-text-bold"]').text.strip("\"")
     return results
-    #csv_writer1.writerow(result_dict.values())
 
-# Prepare one .csv files.
+# Prepare one .csv file.
 csv_file1 = open('main_amazon.csv', 'w', encoding='utf-8', newline='')
 csv_writer1 = csv.writer(csv_file1)
 csv_writer1.writerow(['country', 'title', 'rating', 'price', 'sponsored', 'form']) 
@@ -60,8 +64,6 @@ for url in url_list:
     f.close()
 
     pages = 10
-    # Initialize an empty dictionary for each review
-    
     for page in range(pages):
         # Find all the results. The find_elements function will return a list of selenium select elements.
         # Check the documentation here: http://selenium-python.readthedocs.io/locating-elements.html
@@ -69,13 +71,13 @@ for url in url_list:
         # Iterate through the list and find the item results on the first page of each site.
         # using the "amazon_result_parser" function.
         for result in default_results:
-
+            # Initialize an empty dictionary for each review
+            result_dict = {}
             # Used try and except to skip the result elements that are empty. 
             # Used relative xpath to locate the needed elements.
             # Once elements are located, used 'element.text' to return its string.
             # To get the attribute instead of the text of each element, used 'element.get_attribute()'
             # NOTE: Pages which display '48' results vs '16' results per page are coded slightly differently. 
-            result_dict = {}
             if '48' in search_results:
                 try:
                     title = result.find_element_by_xpath('.//span[@class="a-size-base-plus a-color-base a-text-normal"]').text
@@ -120,7 +122,6 @@ for url in url_list:
             result_dict['sponsored'] = sponsored
             result_dict['form'] = form
             csv_writer1.writerow(result_dict.values())
-
 
         try:
             driver.find_element_by_xpath('//li[@class="a-last"]').click()
